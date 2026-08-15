@@ -462,12 +462,12 @@ class PacerScene extends Phaser.Scene {
     let staminaRate=0;
 
     if(inDraft&&this.flow>=70){
-      // Stable wheel: strong recovery, capped later at 95%.
-      staminaRate=+4.0;
+      // Stable wheel: recovery is intentionally fast to support repeated attacks.
+      staminaRate=+6.0;
 
     }else if(inDraft){
       // Flow is building / partial draft.
-      staminaRate=+1.5;
+      staminaRate=+2.5;
 
     }else if(this.flow>=35){
       // Normal exposed riding.
@@ -501,7 +501,7 @@ class PacerScene extends Phaser.Scene {
 
     if(this.exhausted){
       if(inDraft){
-        staminaRate=+1.25;
+        staminaRate=+2.5;
       }else{
         staminaRate=0;
       }
@@ -513,7 +513,7 @@ class PacerScene extends Phaser.Scene {
 
     const staminaCeiling=
       (!this.exhausted&&staminaRate>0)
-        ? 95
+        ? 98
         : 100;
 
     this.stamina=Phaser.Math.Clamp(
@@ -535,11 +535,11 @@ class PacerScene extends Phaser.Scene {
 
     }else if(this.stamina>1){
       if(inDraft&&this.flow>=70){
-        this.tipText.setText('FLOW ON — STAMINA +4');
+        this.tipText.setText('FLOW ON — STAMINA +6');
         this.tipText.setColor('#22d9ff');
 
       }else if(inDraft){
-        this.tipText.setText('DRAFT — STAMINA +1.5');
+        this.tipText.setText('DRAFT — STAMINA +2.5');
         this.tipText.setColor('#9ba4b7');
 
       }else if(this.cadence>128){
