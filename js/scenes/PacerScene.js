@@ -379,6 +379,8 @@ class PacerScene extends Phaser.Scene {
         One lap later starts lap 2.
         Two laps later is the finish.
       */
+      this.exhausted=false;
+
       this.riders.forEach((r,i)=>{
         r.firstOpenWhiteLine=this.nextFinishCrossing(r.progress);
         r.openFinishProgress=r.firstOpenWhiteLine+2;
@@ -450,68 +452,111 @@ class PacerScene extends Phaser.Scene {
       staminaRate = 0  => neutral
       staminaRate < 0  => drain
     */
+    /*
+      v0.4.3 — STAMINA ZONES
+
+      Draft / Flow is the recovery state.
+      Normal exposed riding is sustainable for longer.
+      Attack and sprint are the deliberate high-cost states.
+    */
     let staminaRate=0;
 
     if(inDraft&&this.flow>=70){
-      staminaRate=
-        this.cadence<=102
-          ? +3.8
-          : this.cadence<=110
-            ? +2.1
-            : +0.7;
+      // Stable wheel: strong recovery, capped later at 95%.
+      staminaRate=+4.0;
 
     }else if(inDraft){
-      staminaRate=
-        this.cadence<=104
-          ? +0.8
-          : -0.6;
+      // Flow is building / partial draft.
+      staminaRate=+1.5;
 
     }else if(this.flow>=35){
-      staminaRate=
-        this.cadence<=104
-          ? -1.3
-          : -2.4;
+      // Normal exposed riding.
+      staminaRate=-0.8;
 
     }else{
-      staminaRate=
-        this.cadence<=104
-          ? -2.8
-          : -4.4;
+      // Completely out of Flow.
+      staminaRate=-1.8;
     }
 
-    // Attack / sprint remains the main intentional stamina spend.
+    // Attack zone.
     if(this.cadence>116){
-      staminaRate-=
-        2.4+(this.cadence-116)*.11;
+      staminaRate=-4.5;
     }
 
+    // Full sprint zone.
     if(this.cadence>128){
-      staminaRate-=1.8;
+      staminaRate=-7.0;
     }
 
-    // Outer line in clean air is slightly more expensive.
-    if(!inDraft&&player.lane===2){
-      staminaRate-=.6;
+    // Outer line remains slightly more expensive when exposed.
+    if(!inDraft&&player.lane===2&&this.cadence<=116){
+      staminaRate-=0.25;
     }
+
+    // Exhaustion state:
+    // at zero, recovery is deliberately slow until reaching 20%.
+    if(this.stamina<=0.5){
+      this.exhausted=true;
+    }
+
+    if(this.exhausted){
+      if(inDraft){
+        staminaRate=+1.25;
+      }else{
+        staminaRate=0;
+      }
+
+      if(this.stamina>=20){
+        this.exhausted=false;
+      }
+    }
+
+    const staminaCeiling=
+      (!this.exhausted&&staminaRate>0)
+        ? 95
+        : 100;
 
     this.stamina=Phaser.Math.Clamp(
       this.stamina+staminaRate*dt,
       0,
-      100
+      staminaCeiling
     );
 
     this.updateCPUs(dt);
 
-    if(this.stamina>1){
-      if(inDraft&&this.flow>=70){
-        this.tipText.setText('FLOW ON — STAMINA RECOVERING');
-        this.tipText.setColor('#22d9ff');
-      }else if(inDraft){
-        this.tipText.setText('DRAFT — FLOW BUILDING');
-        this.tipText.setColor('#9ba4b7');
-      }else{
-        this.tipText.setText('FLOW OFF — STAMINA DRAIN');
+    if(this.exhausted){
+      if(inDraft){
+        this.tipText.setText('EXHAUSTED — RECOVER TO 20%');
         this.tipText.setColor('#ffcc33');
+      }else{
+        this.tipText.setText('EXHAUSTED — FIND THE DRAFT');
+        this.tipText.setColor('#ff5a5a');
+      }
+
+    }else if(this.stamina>1){
+      if(inDraft&&this.flow>=70){
+        this.tipText.setText('FLOW ON — STAMINA +4');
+        this.tipText.setColor('#22d9ff');
+
+      }else if(inDraft){
+        this.tipText.setText('DRAFT — STAMINA +1.5');
+        this.tipText.setColor('#9ba4b7');
+
+      }else if(this.cadence>128){
+        this.tipText.setText('SPRINT — STAMINA -7');
+        this.tipText.setColor('#ff5a5a');
+
+      }else if(this.cadence>116){
+        this.tipText.setText('ATTACK — STAMINA -4.5');
+        this.tipText.setColor('#ffcc33');
+
+      }else if(this.flow<35){
+        this.tipText.setText('FLOW OFF — STAMINA -1.8');
+        this.tipText.setColor('#ffcc33');
+
+      }else{
+        this.tipText.setText('EXPOSED — STAMINA -0.8');
+        this.tipText.setColor('#9ba4b7');
       }
     }
 
