@@ -321,22 +321,47 @@ class PacerScene extends Phaser.Scene {
     player.speedKmh=this.approach(player.speedKmh,targetKmh,6*dt,2.6*dt);
     player.progress+=this.progressPerSecond(player.speedKmh)*dt;
     if(gapPx<-8){ player.progress=desired+8/this.perimeter(this.track.referenceR); player.speedKmh=Math.min(player.speedKmh,this.pacerSpeedKmh*1.005); }
+    const activePedalWindow=(this.time.now-this.lastPedalTime)<950;
+    const inPacerFlow=gapM<=5&&activePedalWindow&&this.cadence>=62;
+
     let staminaRate=0;
-    if(gapM<=4.5&&this.flow>=58){ staminaRate=this.cadence<=112?2.5:.4; this.flow=Math.min(100,this.flow+2.4*dt); }
-    else if(gapM<=7.5){ staminaRate=0; this.flow=Math.max(0,this.flow-.25*dt); }
-    else if(gapM<=11){ staminaRate=-(.8+Math.max(0,this.cadence-103)*.02); this.flow=Math.max(0,this.flow-1.2*dt); }
-    else { staminaRate=-(1.8+Math.max(0,this.cadence-98)*.035); this.flow=Math.max(0,this.flow-2.4*dt); }
+
+    if(inPacerFlow){
+      this.flow=Math.min(100,this.flow+18*dt);
+      staminaRate=this.cadence<=108?1.8:.35;
+    }else{
+      const flowLoss=!activePedalWindow?28:(gapM>8?22:14);
+      this.flow=Math.max(0,this.flow-flowLoss*dt);
+
+      if(gapM<=7.5)staminaRate=-.15;
+      else if(gapM<=11)staminaRate=-(.9+Math.max(0,this.cadence-102)*.02);
+      else staminaRate=-(1.9+Math.max(0,this.cadence-96)*.04);
+    }
+
     this.stamina=Phaser.Math.Clamp(this.stamina+staminaRate*dt,0,100);
-    this.decayCadence(dt,2200,7);
+
+    // Must keep pedaling, but still at a comfortable rhythm.
+    this.decayCadence(dt,900,18);
     if(this.pacerProgress>=this.pacerFinishProgress){
       this.pacerProgress=this.pacerFinishProgress;
       this.beginOpenRace();
       return;
     }
     this.statusText.setText(`${Math.max(0,Math.round(gapM))} m`); this.lineText.setText('--');
-    if(gapM>10){ this.tipText.setText('GAP — recupere o Flow'); this.tipText.setColor('#ffcc33'); }
-    else if(this.flow>75){ this.tipText.setText('FLOW — stamina protegida'); this.tipText.setColor('#ff2b6d'); }
-    else { this.tipText.setText('49x14  //  ~82–95 RPM'); this.tipText.setColor('#9ba4b7'); }
+
+    if(inPacerFlow&&this.flow>=70){
+      this.tipText.setText('FLOW ON — KEEP PEDALING');
+      this.tipText.setColor('#22d9ff');
+    }else if(!activePedalWindow){
+      this.tipText.setText('PEDAL — FLOW DROPPING');
+      this.tipText.setColor('#ffcc33');
+    }else if(gapM>8){
+      this.tipText.setText('GAP — FLOW OFF');
+      this.tipText.setColor('#ffcc33');
+    }else{
+      this.tipText.setText('49x14  //  ~82–95 RPM');
+      this.tipText.setColor('#9ba4b7');
+    }
   }
 
   beginOpenRace(){
@@ -406,12 +431,12 @@ class PacerScene extends Phaser.Scene {
 
       this.flow=Math.min(
         100,
-        this.flow+(2.0+2.8*quality)*dt
+        this.flow+(18+12*quality)*dt
       );
     }else{
       this.flow=Math.max(
         0,
-        this.flow-2.4*dt
+        this.flow-24*dt
       );
     }
 
@@ -427,44 +452,31 @@ class PacerScene extends Phaser.Scene {
     */
     let staminaRate=0;
 
-    if(inDraft&&this.flow>=78){
-      // Ideal protection: recover meaningfully.
+    if(inDraft&&this.flow>=70){
       staminaRate=
         this.cadence<=102
-          ? +2.8
+          ? +3.8
           : this.cadence<=110
-            ? +1.5
-            : +0.4;
-
-    }else if(inDraft&&this.flow>=60){
-      // In the wheel, but not fully settled.
-      staminaRate=
-        this.cadence<=104
-          ? +1.0
-          : this.cadence<=112
-            ? +0.2
-            : -0.8;
+            ? +2.1
+            : +0.7;
 
     }else if(inDraft){
-      // Drafting with poor Flow still reduces the damage.
       staminaRate=
         this.cadence<=104
-          ? +0.2
-          : -1.1;
+          ? +0.8
+          : -0.6;
 
-    }else if(this.flow>=55){
-      // Exposed but still organized.
+    }else if(this.flow>=35){
       staminaRate=
         this.cadence<=104
-          ? -1.2
-          : -2.2;
+          ? -1.3
+          : -2.4;
 
     }else{
-      // Lost Flow: exposed riding becomes expensive.
       staminaRate=
         this.cadence<=104
-          ? -2.4
-          : -3.9;
+          ? -2.8
+          : -4.4;
     }
 
     // Attack / sprint remains the main intentional stamina spend.
@@ -491,20 +503,14 @@ class PacerScene extends Phaser.Scene {
     this.updateCPUs(dt);
 
     if(this.stamina>1){
-      if(inDraft&&this.flow>=78){
-        this.tipText.setText('DRAFT — STAMINA RECOVERING');
+      if(inDraft&&this.flow>=70){
+        this.tipText.setText('FLOW ON — STAMINA RECOVERING');
         this.tipText.setColor('#22d9ff');
-
-      }else if(inDraft&&this.flow>=60){
-        this.tipText.setText('DRAFT — STAMINA PROTECTED');
-        this.tipText.setColor('#22d9ff');
-
       }else if(inDraft){
-        this.tipText.setText('DRAFT — BUILD FLOW');
+        this.tipText.setText('DRAFT — FLOW BUILDING');
         this.tipText.setColor('#9ba4b7');
-
-      }else if(this.flow<55){
-        this.tipText.setText('EXPOSED — STAMINA DRAIN');
+      }else{
+        this.tipText.setText('FLOW OFF — STAMINA DRAIN');
         this.tipText.setColor('#ffcc33');
       }
     }
