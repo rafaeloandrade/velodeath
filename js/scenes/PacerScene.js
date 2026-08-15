@@ -462,12 +462,23 @@ class PacerScene extends Phaser.Scene {
     let staminaRate=0;
 
     if(inDraft&&this.flow>=70){
-      // Stable wheel: recovery is intentionally fast to support repeated attacks.
-      staminaRate=+6.0;
+      /*
+        Stable Flow is the recovery state.
+        Even a fast-but-controlled cadence should preserve/recover stamina.
+      */
+      staminaRate=
+        this.cadence<=108
+          ? +7.0
+          : this.cadence<=118
+            ? +4.5
+            : +2.0;
 
     }else if(inDraft){
       // Flow is building / partial draft.
-      staminaRate=+2.5;
+      staminaRate=
+        this.cadence<=110
+          ? +3.0
+          : +1.0;
 
     }else if(this.flow>=35){
       // Normal exposed riding.
@@ -478,13 +489,26 @@ class PacerScene extends Phaser.Scene {
       staminaRate=-1.8;
     }
 
-    // Attack zone.
-    if(this.cadence>116){
+    /*
+      ATTACK / SPRINT COST
+
+      High cadence alone is NOT an attack while sitting in the Draft.
+      Otherwise the player can correctly stay in Flow for two fast laps
+      and still lose all stamina, which defeats the strategic purpose.
+
+      Attack cost applies when:
+      - the player has recently changed lane to overtake, OR
+      - the player is exposed and pushing a very high cadence.
+    */
+    const attackIntent =
+      this.attackIntentTimer>0 ||
+      (!inDraft&&this.cadence>116);
+
+    if(attackIntent&&this.cadence>116){
       staminaRate=-4.5;
     }
 
-    // Full sprint zone.
-    if(this.cadence>128){
+    if(attackIntent&&this.cadence>128){
       staminaRate=-7.0;
     }
 
@@ -501,7 +525,7 @@ class PacerScene extends Phaser.Scene {
 
     if(this.exhausted){
       if(inDraft){
-        staminaRate=+2.5;
+        staminaRate=+3.5;
       }else{
         staminaRate=0;
       }
@@ -535,18 +559,18 @@ class PacerScene extends Phaser.Scene {
 
     }else if(this.stamina>1){
       if(inDraft&&this.flow>=70){
-        this.tipText.setText('FLOW ON — STAMINA +6');
+        this.tipText.setText('FLOW ON — STAMINA RECOVERING');
         this.tipText.setColor('#22d9ff');
 
       }else if(inDraft){
-        this.tipText.setText('DRAFT — STAMINA +2.5');
+        this.tipText.setText('DRAFT — BUILD FLOW');
         this.tipText.setColor('#9ba4b7');
 
-      }else if(this.cadence>128){
+      }else if(attackIntent&&this.cadence>128){
         this.tipText.setText('SPRINT — STAMINA -7');
         this.tipText.setColor('#ff5a5a');
 
-      }else if(this.cadence>116){
+      }else if(attackIntent&&this.cadence>116){
         this.tipText.setText('ATTACK — STAMINA -4.5');
         this.tipText.setColor('#ffcc33');
 
