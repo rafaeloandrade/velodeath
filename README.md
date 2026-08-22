@@ -1,17 +1,15 @@
-# VELODEATH KEIRIN — v0.3.0
+# VELODEATH KEIRIN v0.5.0
 
-Formato: **1 volta com pacer + 2 voltas de corrida aberta**.
+## New flow
+Title → Rider Select → Fate → Race
 
-## Controles
-- ESPAÇO: iniciar
-- ← →: cadência
-- ↑: linha externa
-- ↓: linha interna
-- R: reiniciar
+## Controls
+Menus: arrows + ENTER/SPACE.
+Race: ← → cadence, ↑ ↓ line, R restart.
 
-## Atualização
-Para testar sobre a versão anterior, substitua apenas:
-
-`js/scenes/PacerScene.js`
-
-A principal mudança técnica é o sistema `progress + lane offset`, criado para eliminar teleportes ao trocar de linha.
+## New files
+- js/scenes/TitleScene.js
+- js/scenes/HowToPlayScene.js
+- js/scenes/CreditsScene.js
+- js/scenes/RiderSelectScene.js
+- js/scenes/FateScene.js

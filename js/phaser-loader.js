@@ -12,6 +12,11 @@
 
   const GAME_SCRIPTS = [
     'js/scenes/BootScene.js',
+    'js/scenes/TitleScene.js',
+    'js/scenes/HowToPlayScene.js',
+    'js/scenes/CreditsScene.js',
+    'js/scenes/RiderSelectScene.js',
+    'js/scenes/FateScene.js',
     'js/scenes/PacerScene.js',
     'js/main.js'
   ];

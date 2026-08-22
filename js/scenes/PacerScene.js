@@ -311,9 +311,13 @@ class PacerScene extends Phaser.Scene {
     const spacing=34/this.perimeter(this.track.referenceR);
     this.riders.forEach((r,i)=>{
       if(i===this.playerIndex)return;
-      r.progress=this.pacerProgress-spacing*(i+1); r.speedKmh=this.pacerSpeedKmh; r.cadence=82;
+      const fatePos=this.fateOrder.indexOf(i);
+      const slot=fatePos>=0?fatePos:i;
+      r.progress=this.pacerProgress-spacing*(slot+1); r.speedKmh=this.pacerSpeedKmh; r.cadence=82;
     });
-    const desired=this.pacerProgress-spacing*(this.playerIndex+1);
+    const playerFatePos=this.fateOrder.indexOf(this.playerIndex);
+    const playerSlot=playerFatePos>=0?playerFatePos:this.playerIndex;
+    const desired=this.pacerProgress-spacing*(playerSlot+1);
     const gapPx=this.longitudinalPixels(desired-player.progress);
     const gapM=Math.max(0,gapPx/3);
     const targetByCad=this.cadenceToKmh(this.cadence);
